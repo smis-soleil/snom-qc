@@ -15,6 +15,7 @@ streamlit = "*"
 mpld3 = "*"
 plotly = "*"
 streamlit-shortcuts = "*"
+ipython = "*"
 
 [dev-packages]
 jupyter = "*"
