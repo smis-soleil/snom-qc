@@ -43,10 +43,6 @@ def setup_page(streamlit_layout='wide'):
             'pages/spectrum_overview.py',
             label='Display spectra',
             disabled=not full_file)
-        st.page_link(
-            'pages/test_spectrum_plotly.py',
-            label='Test spectrum plotly',
-        )
 
         st.divider()
 
@@ -116,7 +112,7 @@ def upload_example_file():
     # Effectively, this clears the previously uploaded file
     st.session_state.file_upload_widget_key += "'"
 
-    with open('example.axz', 'rb') as f:
+    with open('source/example.axz', 'rb') as f:
         parse_file(f)
 
 def initialise_upload_widget():
