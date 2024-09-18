@@ -12,7 +12,7 @@ setup_page(streamlit_layout='centered')
 st.title('AXZ File Viewer')
 
 if st.session_state.anasys_doc:
-    st.info('Click on a page in the sidebar to view the uploaded document')
+    st.info('Click on a page in the sidebar to view the uploaded document', icon=':material/keyboard_double_arrow_left:')
 
 st.write(
     '''

@@ -11,16 +11,23 @@ import hashlib
 import xml.etree.ElementTree as ET  # for parsing XML
 import pandas as pd
 from anasyspythontools import anasysio, irspectra, anasysdoc
+import numpy as np
 
 import streamlit as st
 
+import os
+
+DEV_MODE = os.environ.get('DEV_MODE', False)
 
 def setup_page(streamlit_layout='wide'):
     """ 
     Set up a page's sidebar with navitation links and file upload widget
     """
 
-    st.set_page_config(layout=streamlit_layout)
+    st.set_page_config(
+        page_title='Anasys Python Tools' + (' (dev)' if DEV_MODE else ''),
+        layout=streamlit_layout
+    )
 
     # Make sure all keys are initialised (to None if need be)
     # and get their values
@@ -28,6 +35,9 @@ def setup_page(streamlit_layout='wide'):
     full_file = st.session_state.file_extension in ['axz', 'axd']
 
     with st.sidebar:
+
+        if DEV_MODE:
+            st.error('Development mode', icon=':material/warning:')
 
         # Set up navigation links
         st.page_link("app.py", label="Home")
@@ -207,6 +217,38 @@ def parse_map_metadata(file_hash):  # pylint: disable=W0613
 
     return doc, df
 
+# @st.cache_resource
+def parse_spectrum_metadata(file_hash):  # pylint: disable=W0613
+    doc = st.session_state.anasys_doc
+
+    # Define map of tags to display by default, and functions to extract them
+    spectrum_important_tags = {
+        'Label':         lambda k, _: k,
+    }
+
+    df = (
+        pd.DataFrame([doc.RenderedSpectra[k].attrs for k in doc.RenderedSpectra])
+        .assign(
+            Power = lambda x: x.AttenuationBase64.map(np.mean)*100,
+            BackgroundPower = lambda x: x['Background.AttenuatorPower'].map(np.mean)*100,
+            TimeStamp = lambda x: x.TimeStamp.map(lambda x: pd.to_datetime(x).strftime('%Y-%m-%d %H:%M:%S'))
+        )
+        .drop(columns=[
+            'AttenuationBase64', 'Background.AttenuatorPower', 'Background.Table',
+            "Background.UnitOffset", "Background.UnitScale", "Background.Units", 
+            "Background.signal", 'Background.wn', 'Background', 'BeamShapeFactorBase64',
+            'ChannelZero', "DataChannels.IR Phase (Deg)", "DataChannels.PLL Frequency (kHz)", 
+            "DataChannels.IR Amplitude (mV)", 'DutyCycle', 'FreqWindowData',
+            'RotaryPolarizerMotorPositionBase64', 'Background.PolarizerPosition',
+        ])
+    )
+
+    df = df.drop(columns=[c for c in df.columns if 'XMLSchema-instance' in c])
+    
+    # reorder columns to get label and timestamp first
+    df = df[['Label', 'TimeStamp'] + [c for c in df.columns if c not in ['Label', 'TimeStamp']]]
+    return df
+
 
 from anasyspythontools import export
 
@@ -223,3 +265,65 @@ def get_list_of_spectra_and_data_channels(doc):
                 all_channels.append(k)
 
     return spectrum_labels, all_channels    
+
+def collect_map_qc_warnings(doc, labels):
+    flatten = lambda l: [item for sublist in l for item in sublist]
+    return flatten([map_qc_check(doc.HeightMaps[label]) for label in labels])
+
+def map_qc_check(hmap):
+    warnings = []
+
+    if hmap.DataChannel == 'deflection':
+        # TODO: Check that deflection raw values are reported (mean is close to setpoint)
+        defmean = np.mean(hmap.SampleBase64)
+        setpoint = float(hmap.Tags['Setpoint'].split(' ')[0])
+        if DEV_MODE or np.abs(defmean - setpoint) > 0.1:
+            warnings.append(
+                f'Data processing of **{hmap.Label}**: the mean value of {defmean:.3f} V is far from the setpoint of {setpoint:.3f} V'
+            )
+
+        # Check deflction fluctuations are not too high
+        setpoint = float(hmap.Tags['Setpoint'].split(' ')[0])
+        frac_above_0_01 = np.sum(np.abs(hmap.SampleBase64 - setpoint) > 0.01) / hmap.SampleBase64.size
+        if DEV_MODE or frac_above_0_01 > .01:
+            warnings.append(
+                f'Bad AFM tracking in **{hmap.Label}**: {frac_above_0_01*100:.1f}% of pixels is above 0.01 V'
+            )
+    if hmap.DataChannel == 'phase2':
+        # Check phase fluctuations are not too high
+        frac_above_20 = np.sum(np.abs(hmap.SampleBase64) > 20)/ hmap.SampleBase64.size
+        if DEV_MODE or frac_above_20 > .01:
+            warnings.append(
+                f'Bad IR tracking in **{hmap.Label}**: {frac_above_20*100:.1f}% of pixels is above 20°'
+            )
+        # Check high mean
+        phasemean = np.mean(hmap.SampleBase64)
+        if DEV_MODE or np.abs(phasemean) > 1:
+            warnings.append(
+                f'Bad IR tracking in **{hmap.Label}**: the mean value of {phasemean:.2f}° is far from 0°'
+            )
+    if hmap.DataChannel == 'freq2':
+        # Check for PLL saturation
+        data = hmap.SampleBase64
+        pllmax = np.sum(np.max(data)==data) / data.size
+        pllmin = np.sum(np.min(data)==data) / data.size
+        if DEV_MODE or pllmax > .01 or pllmin > 0.01:
+            warnings.append(
+                f'Saturation in **{hmap.Label}**: {pllmax:.2f}% ({pllmin:.2f}%) of pixels are equal to the image maximum (minimum)'
+            )
+        # Check that PLL is not processed
+        pllmean = np.mean(data)
+        if DEV_MODE or np.abs(pllmean) < 10:
+            warnings.append(
+                f'Data processing of **{hmap.Label}**: the mean value of {pllmean:.2f} kHz is close to zero'
+            )
+
+    if hmap.DataChannel == 'height':
+        lines_close_to_zero = np.sum(np.mean(hmap.SampleBase64, axis =1) < 10) / hmap.SampleBase64.shape[0]
+        if DEV_MODE or lines_close_to_zero > .01:
+            warnings.append(
+                f'Data processing of **{hmap.Label}**: {lines_close_to_zero:.2f}% of lines have a mean value below 10 nm'
+            )
+
+    # Check that IR amplitude is reported without processing
+    return warnings

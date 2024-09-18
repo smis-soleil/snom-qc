@@ -38,12 +38,21 @@ def plot_map(ax, hmap, zorder=None, cbar=True):
     data = hmap.SampleBase64.copy()
     if hmap.DataChannel == 'deflection':
         data = data - float(hmap.Tags['Setpoint'].split(' ')[0])
+    if hmap.DataChannel == 'height':
+        # Subtract linear interpolation from each row
+        data = data - np.array([np.linspace(row[0], row[-1], len(row)) for row in data])
+
+    # Define colorbar limits
+    vmin, vmax = np.percentile(data, .1), np.percentile(data, 99.9)
+    if hmap.DataChannel == 'deflection' or hmap.DataChannel == 'phase2':
+        vmax = max(vmax, -vmin)
+        vmin = -vmax
 
     # Plot image and colorbar
-    m = ax.imshow(data, extent=extent, cmap=cmap, zorder=zorder)
+    m = ax.imshow(data, extent=extent, cmap=cmap, zorder=zorder, vmin=vmin, vmax=vmax)
 
     if cbar:
-        add_cbar(ax, m)
+        add_cbar(ax, m, extend='both')
 
     # Add scalebar
     def default_formatter(x, y):
@@ -64,7 +73,7 @@ def plot_map(ax, hmap, zorder=None, cbar=True):
     ax.set(xticks=[], yticks=[])
 
 
-def add_cbar(ax, mappable, label='', divider=None, location='left'):
+def add_cbar(ax, mappable, label='', divider=None, location='left', extend='neither'):
     """
     Add colorbar that is always as high as the image itself
     """
@@ -72,7 +81,7 @@ def add_cbar(ax, mappable, label='', divider=None, location='left'):
     if divider is None:
         divider = make_axes_locatable(ax)
     cax = divider.append_axes(location, size='5%', pad=0.1)
-    ax.figure.colorbar(mappable, cax=cax, label=label, location=location)
+    ax.figure.colorbar(mappable, cax=cax, label=label, location=location, extend=extend)
 
 
 def plot_map_qc(ax, map_trace, map_retrace):
@@ -85,7 +94,7 @@ def plot_map_qc(ax, map_trace, map_retrace):
 
     # Add extra axes
     divider = make_axes_locatable(ax)
-    add_cbar(ax, ax.images[0], divider=divider)
+    add_cbar(ax, ax.images[0], divider=divider, extend='both')
     ax_vert = divider.append_axes('right', size='20%', pad=0.1)
     ax_horo = divider.append_axes('bottom', size='20%', pad=0.1)
 
@@ -99,10 +108,9 @@ def plot_map_qc(ax, map_trace, map_retrace):
 
     # Set labels
     ax.set_title(map_trace['Label'])
-    ax_vert.set_yticks([])
-    ax_vert.set_xticks(ax_vert.get_xticks())
-    ax_vert.set_xticklabels(ax_vert.get_xticklabels(), rotation=70)
     ax_horo.set(xticks=[])
+    ax_vert.set(yticks=[], xticks = ax_vert.get_xticks())
+    ax_vert.set_xticklabels(ax_vert.get_xticklabels(), rotation=90)
 
 @st.cache_resource
 def plot_maps_qc(file_hash, timestamp):
@@ -119,7 +127,7 @@ def plot_maps_qc(file_hash, timestamp):
 
     # Create a grid of axes
     nmaps = len(maps_trace)
-    fig, ax = plt.subplots(1, nmaps, figsize=(5 * nmaps, 5))
+    fig, ax = plt.subplots(1, nmaps, figsize=(5 * nmaps, 5), gridspec_kw={'wspace': 0.25})
 
     # Plot each map
     for i, map_trace in enumerate(maps_trace):

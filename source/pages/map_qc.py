@@ -5,12 +5,20 @@ This pages shows a map QC report for the uploaded document.
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 
-from utils import setup_page_with_redirect
+from utils import setup_page_with_redirect, collect_map_qc_warnings
 import plotting  # pylint: disable=E0401
 
 # Set up sidebar (navigation and uploader to change file)
 setup_page_with_redirect(allowed_file_types=['axz', 'axd'])
+
+st.title('Map QC report')
+st.write(
+    '''
+    This page shows a map QC report for the uploaded document. The report includes a visualisation of all maps at a given timestamp, as well as a download link for a PDF version of the report. We also check for common issues such as high fluctutions in the deflection or IR phase signal, PLL saturation, and data processing errors. This is based on simple heuristics and should not be considered a definitive QC report.
+    '''
+)
 
 # Load map properties from uploaded file
 @st.cache_resource
@@ -41,7 +49,7 @@ if len(doc_uploaded.HeightMaps) == 0:
     st.stop()
 
 # Choose maps to display
-st.write('Choose maps to display:')
+st.caption('Choose maps to display:')
 hmap_groups_table = st.dataframe(
     map_df,
     selection_mode='single-row', on_select='rerun', hide_index=True,
@@ -53,14 +61,19 @@ selected_indices = hmap_groups_table['selection']['rows']
 selected_index = 0 if len(selected_indices) == 0 else selected_indices[0]
 selected_timestamp = map_df.index[selected_index]
 
-
 # Plot QC maps
-with st.spinner():
+with st.spinner('Generating QC report...'):
+
+    st.download_button(
+        label='Download QC report as PDF',
+        data=plotting.generate_mapqc_pdf(file_hash),
+        file_name=f'{st.session_state.file_name}_mapqc.pdf',
+        type='primary'
+    )
+
+with st.spinner('Plotting data...'):
     st.pyplot(plotting.plot_maps_qc(file_hash, selected_timestamp))
 
-# Download button for QC report as PDF
-st.download_button(
-    label='Download QC report as PDF',
-    data=plotting.generate_mapqc_pdf(file_hash),
-    file_name=f'{st.session_state.file_name}_mapqc.pdf'
-)
+map_warnings = collect_map_qc_warnings(doc_uploaded, map_df.loc[selected_timestamp, 'Map Labels'])
+if len(map_warnings) > 0:
+    st.warning(icon=':material/warning:', body='The following potential issues were detected:\n\n* ' + '\n\n* '.join(map_warnings))

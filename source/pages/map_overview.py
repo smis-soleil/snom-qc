@@ -17,6 +17,9 @@ st.write(
     This page shows an overview of the maps in the uploaded document. By default, 
     only IR Amplitude maps in the trace direction are shown, but more maps can be 
     selected below. Click on the checkmark next to each table row to select that map for plotting.
+
+    As little processing as possible is done on this data. Height maps are plotted
+    after a line subtraction, and deflection maps are relative to the setpoint.
     '''
 )
 
@@ -28,27 +31,24 @@ if len(doc.HeightMaps) == 0:
     st.error('No maps found. Choose another file', icon=':material/error:')
     st.stop()
 
-# Display maps in the placeholder, while showing a spinner until the maps are loaded.
-with st.spinner('Loading maps...'):
-    figure_placeholder = st.empty()
-
-
-    # Display visualisation settings
-    st.write('Map metadata. Use the widget above the table to select which columns to display.')
+# Display visualisation settings
+with st.expander('View metadata and select maps to display', expanded=False):
 
     # Choose map properties to display
+    st.caption('Select metadata properties')
     selected_metadata_tags = st.multiselect(
-        label='Select properties to display',
+        label='Metadata properties to display',
         options=df_heightmap_metadata.columns,
         default=['Label', 'Timestamp', 'IRWavenumber', 'ScanRate'],
         label_visibility='collapsed'
     )
 
     # Display map properties (selectable by row)
+    st.caption('Metadata table. Select row to display the corresponding map')
     metadata_table = st.dataframe(
         df_heightmap_metadata, selection_mode='multi-row', on_select='rerun', hide_index=True,
         column_order=selected_metadata_tags,
-        use_container_width=True
+        use_container_width=True,
     )
 
     # Extract map selection
@@ -68,32 +68,27 @@ with st.spinner('Loading maps...'):
     if len(selected_map_labels) == 0:
         selected_map_labels = [df_heightmap_metadata.Labels[0]]
 
-    # Check if creating figure is necessary
-    if 'map_overview_fig' not in st.session_state or \
-        selected_map_labels != st.session_state.selected_map_labels:
+# Store selected map labels
+st.session_state.selected_map_labels = selected_map_labels
 
-        # Store selected map labels
-        st.session_state.selected_map_labels = selected_map_labels
+# Create figure
+nrow = (len(selected_map_labels) - 1) // 3 + 1
+ncol = 3  # pylint: disable=C0103
+fig, ax = plt.subplots(nrow, ncol, figsize=(5*ncol, 4.5*nrow), squeeze=False)
+ax = ax.flatten()
 
-        # Create figure
-        nrow = (len(selected_map_labels) - 1) // 3 + 1
-        ncol = 3  # pylint: disable=C0103
-        fig, ax = plt.subplots(nrow, ncol, figsize=(5*ncol, 4.5*nrow), squeeze=False)
-        ax = ax.flatten()
+# Plot each map
+i = 0  # this makes sure i is defined outside the loop
+for i, label in enumerate(selected_map_labels):
+    hmap = doc.HeightMaps[label]
+    plot_map(ax[i], hmap)
+    ax[i].annotate(hmap.Tags['IRWavenumber'], (0.05, 0.95), xycoords='axes fraction', ha='left', va='top', weight='bold', c='w')
+    ax[i].set_title(label)
+    ax[i].set(xticks=[], yticks=[])
 
-        # Plot each map
-        i = 0  # this makes sure i is defined outside the loop
-        for i, label in enumerate(selected_map_labels):
-            hmap = doc.HeightMaps[label]
-            plot_map(ax[i], hmap)  # TODO: annotate by wavenumber?
-            ax[i].set_title(label)
-            ax[i].set(xticks=[], yticks=[])
+# Hide remaining axes
+for a in ax[i+1:]:
+    a.axis('off')
 
-        # Hide remaining axes
-        for a in ax[i+1:]:
-            a.axis('off')
-
-        st.session_state.map_overview_fig = fig
-
-    # Display figure
-    figure_placeholder.pyplot(st.session_state.map_overview_fig)
+# Display figure
+st.pyplot(fig)
