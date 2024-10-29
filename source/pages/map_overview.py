@@ -66,7 +66,7 @@ with st.expander('View metadata and select maps to display', expanded=False):
 
     # If no IR maps in trace direction, take the first map
     if len(selected_map_labels) == 0:
-        selected_map_labels = [df_heightmap_metadata.Labels[0]]
+        selected_map_labels = [df_heightmap_metadata.Label[0]]
 
 # Store selected map labels
 st.session_state.selected_map_labels = selected_map_labels

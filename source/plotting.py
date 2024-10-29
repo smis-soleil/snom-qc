@@ -82,19 +82,19 @@ def add_cbar(ax, mappable, label='', divider=None, location='left', extend='neit
         divider = make_axes_locatable(ax)
     cax = divider.append_axes(location, size='5%', pad=0.1)
     ax.figure.colorbar(mappable, cax=cax, label=label, location=location, extend=extend)
+    return cax
 
 
 def plot_map_qc(ax, map_trace, map_retrace):
     """
     Plot map with line profiles
     """
-
     # Plot map
     plot_map(ax, map_trace, cbar=False)
 
     # Add extra axes
     divider = make_axes_locatable(ax)
-    add_cbar(ax, ax.images[0], divider=divider, extend='both')
+    cax = add_cbar(ax, ax.images[0], divider=divider, extend='both')
     ax_vert = divider.append_axes('right', size='20%', pad=0.1)
     ax_horo = divider.append_axes('bottom', size='20%', pad=0.1)
 
@@ -107,12 +107,23 @@ def plot_map_qc(ax, map_trace, map_retrace):
         ax_horo.plot(np.arange(m), map_retrace['SampleBase64'][n//2, :], lw=.5)
 
     # Set labels
-    ax.set_title(map_trace['Label'])
+    ax.set_title(map_trace['Label'] + '('+map_trace['UnitPrefix'] + map_trace['Units']+')')
     ax_horo.set(xticks=[])
-    ax_vert.set(yticks=[], xticks = ax_vert.get_xticks())
-    ax_vert.set_xticklabels(ax_vert.get_xticklabels(), rotation=90)
+    ax_vert.xaxis.set_major_locator(plt.MaxNLocator(3))
+    ax_horo.yaxis.set_major_locator(plt.MaxNLocator(3))
+    ax_vert.tick_params(axis='x', rotation=90)
+    ax_vert.set_yticks([])
 
-@st.cache_resource
+    # def formatter(x, pos):
+    #     # print(pos)
+    #     if pos == 0: 
+    #         print('test') 
+    #         return 'test'
+    #     return f'{x:.2f}'
+
+    # cax.yaxis.set_major_formatter(formatter)
+
+# @st.cache_resource
 def plot_maps_qc(file_hash, timestamp):
     """
     Plot all maps at a given timestamp in one figure
@@ -120,24 +131,42 @@ def plot_maps_qc(file_hash, timestamp):
 
     doc = st.session_state.anasys_doc
 
-    maps_trace = [m for m in doc.HeightMaps.values()
-                  if m.TimeStamp == timestamp and m.Tags['TraceRetrace'] == 'PrimaryTrace']
-    maps_retrace = [m for m in doc.HeightMaps.values()
-                    if m.TimeStamp == timestamp and m.Tags['TraceRetrace'] == 'PrimaryRetrace']
+    # Get all channels at the given timestamp
+    channels_at_timestamp = {m.DataChannel for m in doc.HeightMaps.values() if m.TimeStamp == timestamp}
+    preferred_order = ['height', 'deflection', '//Func/Amplitude(x2_32,y2_32)', 'freq2', 'phase2']
+    channels_at_timestamp = sorted(channels_at_timestamp, key=lambda x: preferred_order.index(x) if x in preferred_order else 999)
+    print(channels_at_timestamp)
+
+    if len(channels_at_timestamp) == 0:
+        st.write('No maps found at this timestamp')
+        return
 
     # Create a grid of axes
-    nmaps = len(maps_trace)
-    fig, ax = plt.subplots(1, nmaps, figsize=(5 * nmaps, 5), gridspec_kw={'wspace': 0.25})
+    nmaps = len(channels_at_timestamp) 
+    fig, ax = plt.subplots(1, nmaps, figsize=(5 * nmaps, 5), gridspec_kw={'wspace': 0.25}, squeeze=False)
 
     # Plot each map
-    for i, map_trace in enumerate(maps_trace):
-        map_retrace = [m for m in maps_retrace if m['Label'] == map_trace['Label']]
-        if len(map_retrace) > 0:
-            map_retrace = map_retrace[0]
-        else:
+    for i, channel in enumerate(channels_at_timestamp):
+        # print(list(doc.HeightMaps.values()))
+
+        maps_trace = [m for m in doc.HeightMaps.values() 
+                      if m.TimeStamp == timestamp and 
+                      m.DataChannel == channel and 
+                      m.Tags['TraceRetrace'] == 'PrimaryTrace']
+        maps_retrace = [m for m in doc.HeightMaps.values() 
+                        if m.TimeStamp == timestamp and 
+                        m.DataChannel == channel and 
+                        m.Tags['TraceRetrace'] == 'PrimaryRetrace']
+        
+        if len(maps_trace) > 0:
+            map_trace = maps_trace[0]
+            map_retrace = None if len(maps_retrace) == 0 else maps_retrace[0]
+
+        elif len(maps_retrace) > 0:
+            map_trace = maps_retrace[0]
             map_retrace = None
 
-        plot_map_qc(ax[i], map_trace, map_retrace)
+        plot_map_qc(ax[0, i], map_trace, map_retrace)
 
     return fig
 

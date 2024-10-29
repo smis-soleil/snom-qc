@@ -258,6 +258,8 @@ def get_list_of_spectra_and_data_channels(doc):
     """
 
     spectrum_labels = list(doc.RenderedSpectra)
+    print(doc.HeightMaps)
+
     all_channels = []
     for spectrum in doc.RenderedSpectra.values():
         for k in export.spectrum_to_Dataset(spectrum).keys():

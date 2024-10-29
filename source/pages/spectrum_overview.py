@@ -122,6 +122,6 @@ st.download_button(
     label='Download QC report as PDF',
     data=generate_pdf(),
     file_name=f'{filename}_spectrumqc.pdf',
-    # type='primary'
+    icon=':material/download:',
+    type='primary'
 )
-
