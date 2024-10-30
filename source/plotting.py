@@ -15,7 +15,7 @@ from io import BytesIO
 from matplotlib.backends.backend_pdf import PdfPages
 
 
-def plot_map(ax, hmap, zorder=None, cbar=True):
+def plot_map(ax, hmap, zorder=None, cbar=True, sbar=True):
     """
     Plot map with applied flattening method, colormap and scalebar
     """
@@ -60,17 +60,26 @@ def plot_map(ax, hmap, zorder=None, cbar=True):
             y = 'µm'
         return f'{x} {y}'
 
-    ax.add_artist(ScaleBar(
-        dx=1e-6,
-        pad=.7,
-        box_alpha=0,
-        color='w',
-        location='lower left',
-        scale_formatter=default_formatter,
-        font_properties={'weight': 'bold'}
-    ))
+    add_scalebar(ax)
 
     ax.set(xticks=[], yticks=[])
+
+def add_scalebar(ax, dx=1e-6, color='w', pad=.7, scale_loc='top', loc='lower left', box_alpha=0, font_weight="heavy"):
+    return ax.add_artist(ScaleBar(
+        dx=dx, color=color, pad=pad, scale_loc=scale_loc, location=loc, 
+        box_alpha=box_alpha, font_properties={'weight': font_weight}
+    ))
+
+def get_im_extent(hmap):
+    try: 
+        width = float(hmap.Size.X)
+        height = float(hmap.Size.Y)
+        X0 = float(hmap.Position.X)
+        Y0 = float(hmap.Position.Y)
+        return (X0 - width / 2, X0 + width / 2, Y0 - height / 2, Y0 + height / 2)
+    except AttributeError:
+        return (hmap.X.min(), hmap.X.max(), hmap.Y.min(), hmap.Y.max())
+
 
 
 def add_cbar(ax, mappable, label='', divider=None, location='left', extend='neither'):
@@ -107,7 +116,7 @@ def plot_map_qc(ax, map_trace, map_retrace):
         ax_horo.plot(np.arange(m), map_retrace['SampleBase64'][n//2, :], lw=.5)
 
     # Set labels
-    ax.set_title(map_trace['Label'] + '('+map_trace['UnitPrefix'] + map_trace['Units']+')')
+    ax.set_title(f'{map_trace.Label} ({map_trace.UnitPrefix}{map_trace.Units})')
     ax_horo.set(xticks=[])
     ax_vert.xaxis.set_major_locator(plt.MaxNLocator(3))
     ax_horo.yaxis.set_major_locator(plt.MaxNLocator(3))

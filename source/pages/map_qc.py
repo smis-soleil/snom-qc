@@ -18,7 +18,7 @@ st.write(
     '''
     This page shows a map QC report for the uploaded document. The report includes a visualisation of all maps at a given timestamp, as well as a download link for a PDF version of the report. We also check for common issues such as high fluctutions in the deflection or IR phase signal, PLL saturation, and data processing errors. This is based on simple heuristics and should not be considered a definitive QC report.
 
-    Note that heightmaps and deflection maps are processed (linear fit and setpoint subtraction, respectively) before plotting the image, yet the vertical and horizontal traces show the original data.
+    Note that heightmaps and deflection maps are processed (linear fit and setpoint subtraction, respectively) before plotting the image, yet the trace plots show the original data.
     '''
 )
 

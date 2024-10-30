@@ -1,3 +1,4 @@
+# adjustText==1.2.0
 altair==5.4.1
 anasyspythontools==0.4.1
 anyio==4.6.2.post1

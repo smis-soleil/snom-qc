@@ -42,6 +42,10 @@ def setup_page(streamlit_layout='wide'):
         # Set up navigation links
         st.page_link("app.py", label="Home")
         st.page_link(
+            'pages/optical.py',
+            label='Optical images',
+            disabled=not full_file)
+        st.page_link(
             'pages/map_overview.py',
             label='Map overview',
             disabled=not full_file)
