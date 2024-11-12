@@ -19,6 +19,7 @@ st.write(
     This page shows a map QC report for the uploaded document. The report includes a visualisation of all maps at a given timestamp, as well as a download link for a PDF version of the report. We also check for common issues such as high fluctutions in the deflection or IR phase signal, PLL saturation, and data processing errors. This is based on simple heuristics and should not be considered a definitive QC report.
 
     Note that heightmaps and deflection maps are processed (linear fit and setpoint subtraction, respectively) before plotting the image, yet the trace plots show the original data.
+    
     '''
 )
 
@@ -50,33 +51,42 @@ if len(doc_uploaded.HeightMaps) == 0:
     st.error('No maps found. Choose another file')
     st.stop()
 
-# Choose maps to display
-st.caption('Choose maps to display:')
-hmap_groups_table = st.dataframe(
-    map_df,
-    selection_mode='single-row', on_select='rerun', hide_index=True,
-    use_container_width=True
+ncols = max(map_df['Map Labels'].apply(len))
+
+dowload_placeholder = st.empty()
+dowload_placeholder.download_button(
+    label='Generating PDF report...',
+    data=b'',
+    file_name=f'{st.session_state.file_name}_mapqc.pdf',
+    type='primary',
+    icon=':material/download:',
+    disabled=True,
+    key='disabled-button'
 )
 
-# Get selected timestamp
-selected_indices = hmap_groups_table['selection']['rows']
-selected_index = 0 if len(selected_indices) == 0 else selected_indices[0]
-selected_timestamp = map_df.index[selected_index]
+map_warnings = {
+    ts: collect_map_qc_warnings(doc_uploaded, map_df.loc[ts, 'Map Labels'])
+    for ts in map_df.index
+}
+
+for ts in map_df.index:
+    st.pyplot(plotting.plot_maps_qc_at_timestamp(file_hash, ts, ncols=ncols))
+    if len(map_warnings[ts]) > 0:
+        st.warning(icon=':material/warning:', body='The following potential issues were detected:\n\n* ' + '\n\n* '.join(map_warnings[ts]))
+
+if all(len(map_warnings[ts]) == 0 for ts in map_df.index):
+    st.success('No potential issues were detected.', icon=':material/check_circle:')
 
 # Plot QC maps
-with st.spinner('Generating QC report...'):
 
-    st.download_button(
-        label='Download QC report as PDF',
-        data=plotting.generate_mapqc_pdf(file_hash),
-        file_name=f'{st.session_state.file_name}_mapqc.pdf',
-        type='primary',
-        icon=':material/download:'
-    )
+# dowload_placeholder.empty()
+dowload_placeholder.download_button(
+    label='Download QC report as PDF',
+    data=plotting.generate_mapqc_pdf(file_hash, ncols=ncols),
+    file_name=f'{st.session_state.file_name}_mapqc.pdf',
+    type='primary',
+    icon=':material/download:',
+)
 
-with st.spinner('Plotting data...'):
-    st.pyplot(plotting.plot_maps_qc(file_hash, selected_timestamp))
-
-map_warnings = collect_map_qc_warnings(doc_uploaded, map_df.loc[selected_timestamp, 'Map Labels'])
-if len(map_warnings) > 0:
-    st.warning(icon=':material/warning:', body='The following potential issues were detected:\n\n* ' + '\n\n* '.join(map_warnings))
+# with st.spinner('Plotting data...'):
+#     st.pyplot(plotting.plot_maps_qc(file_hash, selected_timestamp))

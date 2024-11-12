@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 from anasyspythontools import export
 
-st.set_page_config(layout="wide")
+st.set_page_config(layout="centered")
 
 from utils import setup_page_with_redirect, initialise_upload_widget
 setup_page_with_redirect(allowed_file_types=['axz', 'axd', 'irb'])

@@ -10,7 +10,7 @@ import gzip
 import hashlib
 import xml.etree.ElementTree as ET  # for parsing XML
 import pandas as pd
-from anasyspythontools import anasysio, irspectra, anasysdoc
+from anasyspythontools import anasysio, irspectra, anasysdoc, anasysfile
 import numpy as np
 
 import streamlit as st
@@ -19,7 +19,7 @@ import os
 
 DEV_MODE = os.environ.get('DEV_MODE', False)
 
-def setup_page(streamlit_layout='wide'):
+def setup_page(streamlit_layout='centered'):
     """ 
     Set up a page's sidebar with navitation links and file upload widget
     """
@@ -63,7 +63,7 @@ def setup_page(streamlit_layout='wide'):
         initialise_upload_widget()
 
 
-def setup_page_with_redirect(allowed_file_types, streamlit_layout='wide'):
+def setup_page_with_redirect(allowed_file_types, streamlit_layout='centered'):
     """
     Checks whether the file uploaded is of the correct type to view a page
     Redirects to home page if not
@@ -147,12 +147,24 @@ def initialise_upload_widget():
         st.error('Upload file here')
 
     def on_upload():
-        file = st.session_state[st.session_state.file_upload_widget_key]
 
-        # When the uploader is cleared by the user, `file` will be None
-        if file is not None:
-            parse_file(file)
+        try:
+            file = st.session_state[st.session_state.file_upload_widget_key]
+            # When the uploader is cleared by the user, `file` will be None
+            if file is not None:
+                parse_file(file)
 
+        # TODO: better error handling
+        except Exception as e:
+            pass
+        #     st.session_state.anasys_doc = None
+        #     st.session_state.file_name = None
+        #     st.session_state.file_hash = None
+        #     st.session_state.file_extension = None
+        #     st.switch_page('app.py')
+        #     st.toast(f'Error: {e}', icon=':material/error:')
+
+    
     st.file_uploader('Upload a file', type=['axz', 'axd'], label_visibility='collapsed',
                      on_change=on_upload, key=st.session_state.file_upload_widget_key)
 
@@ -244,10 +256,12 @@ def parse_spectrum_metadata(file_hash):  # pylint: disable=W0613
             'ChannelZero', "DataChannels.IR Phase (Deg)", "DataChannels.PLL Frequency (kHz)", 
             "DataChannels.IR Amplitude (mV)", 'DutyCycle', 'FreqWindowData',
             'RotaryPolarizerMotorPositionBase64', 'Background.PolarizerPosition',
-        ])
+        ], errors='ignore')
     )
 
     df = df.drop(columns=[c for c in df.columns if 'XMLSchema-instance' in c])
+    # map all values of type AnasysElement to None
+    df = df.applymap(lambda x: None if isinstance(x, anasysfile.AnasysElement) else x)
     
     # reorder columns to get label and timestamp first
     df = df[['Label', 'TimeStamp'] + [c for c in df.columns if c not in ['Label', 'TimeStamp']]]
@@ -262,7 +276,7 @@ def get_list_of_spectra_and_data_channels(doc):
     """
 
     spectrum_labels = list(doc.RenderedSpectra)
-    print(doc.HeightMaps)
+    # print(doc.HeightMaps)
 
     all_channels = []
     for spectrum in doc.RenderedSpectra.values():
@@ -272,9 +286,9 @@ def get_list_of_spectra_and_data_channels(doc):
 
     return spectrum_labels, all_channels    
 
-def collect_map_qc_warnings(doc, labels):
+def collect_map_qc_warnings(doc, mapkeys):
     flatten = lambda l: [item for sublist in l for item in sublist]
-    return flatten([map_qc_check(doc.HeightMaps[label]) for label in labels])
+    return flatten([map_qc_check(doc.HeightMaps[key]) for key in mapkeys])
 
 def map_qc_check(hmap):
     warnings = []
@@ -285,7 +299,7 @@ def map_qc_check(hmap):
         setpoint = float(hmap.Tags['Setpoint'].split(' ')[0])
         if DEV_MODE or np.abs(defmean - setpoint) > 0.1:
             warnings.append(
-                f'Data processing of **{hmap.Label}**: the mean value of {defmean:.3f} V is far from the setpoint of {setpoint:.3f} V'
+                f'Possible data processing of deflection map ({hmap.Label}): the mean value of {defmean:.3f} V is far from the recorded setpoint of {setpoint:.3f} V'
             )
 
         # Check deflction fluctuations are not too high
@@ -293,42 +307,42 @@ def map_qc_check(hmap):
         frac_above_0_01 = np.sum(np.abs(hmap.SampleBase64 - setpoint) > 0.01) / hmap.SampleBase64.size
         if DEV_MODE or frac_above_0_01 > .01:
             warnings.append(
-                f'Bad AFM tracking in **{hmap.Label}**: {frac_above_0_01*100:.1f}% of pixels is above 0.01 V'
+                f'Bad AFM tracking in deflection map ({hmap.Label}): {frac_above_0_01*100:.1f}% of pixels is over 0.01 V away from the setpoint of {setpoint:.3f} V'
             )
     if hmap.DataChannel == 'phase2':
         # Check phase fluctuations are not too high
         frac_above_20 = np.sum(np.abs(hmap.SampleBase64) > 20)/ hmap.SampleBase64.size
         if DEV_MODE or frac_above_20 > .01:
             warnings.append(
-                f'Bad IR tracking in **{hmap.Label}**: {frac_above_20*100:.1f}% of pixels is above 20°'
+                f'Bad IR tracking in IR Phase map ({hmap.Label}): {frac_above_20*100:.1f}% of pixels is above 20°'
             )
         # Check high mean
         phasemean = np.mean(hmap.SampleBase64)
         if DEV_MODE or np.abs(phasemean) > 1:
             warnings.append(
-                f'Bad IR tracking in **{hmap.Label}**: the mean value of {phasemean:.2f}° is far from 0°'
+                f'Bad IR tracking in IR Phase map ({hmap.Label}): the mean value of {phasemean:.2f}° is far from 0°'
             )
     if hmap.DataChannel == 'freq2':
         # Check for PLL saturation
         data = hmap.SampleBase64
-        pllmax = np.sum(np.max(data)==data) / data.size
-        pllmin = np.sum(np.min(data)==data) / data.size
-        if DEV_MODE or pllmax > .01 or pllmin > 0.01:
+        pllmax = np.sum(np.abs(np.max(data) - data) < .0001) / data.size
+        pllmin = np.sum(np.abs(np.min(data) - data) < .0001) / data.size
+        if DEV_MODE or pllmax > .1 or pllmin > 0.1:
             warnings.append(
-                f'Saturation in **{hmap.Label}**: {pllmax:.2f}% ({pllmin:.2f}%) of pixels are equal to the image maximum (minimum)'
+                f'Saturation in PLL Frequency map ({hmap.Label}): {pllmax:.1f}% ({pllmin:.1f}%) of pixels are equal to the image maximum (minimum)'
             )
         # Check that PLL is not processed
         pllmean = np.mean(data)
         if DEV_MODE or np.abs(pllmean) < 10:
             warnings.append(
-                f'Data processing of **{hmap.Label}**: the mean value of {pllmean:.2f} kHz is close to zero'
+                f'Possible data processing of PLL Frequency map ({hmap.Label}): the mean value of {pllmean:.2f} kHz is close to zero'
             )
 
     if hmap.DataChannel == 'height':
-        lines_close_to_zero = np.sum(np.mean(hmap.SampleBase64, axis =1) < 10) / hmap.SampleBase64.shape[0]
+        lines_close_to_zero = np.sum(np.mean(np.abs(hmap.SampleBase64), axis =1) < 10) / hmap.SampleBase64.shape[0]
         if DEV_MODE or lines_close_to_zero > .01:
             warnings.append(
-                f'Data processing of **{hmap.Label}**: {lines_close_to_zero:.2f}% of lines have a mean value below 10 nm'
+                f'Possible data processing of height map ({hmap.Label}): {lines_close_to_zero:.1f}% of lines have a mean value below 10 nm'
             )
 
     # Check that IR amplitude is reported without processing

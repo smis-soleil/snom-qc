@@ -16,8 +16,7 @@ utils.setup_page_with_redirect(allowed_file_types=['axz', 'axd'], streamlit_layo
 st.title('Optical image overview')
 
 # TODO
-st.write('==check scalebar is correct==')
-st.write('==choose new example file==')
+st.warning('==choose new example file (eg 2024-08-08_TB012G_d3t16_alldata.axz or 2024-08-13_TB012G_wt3t2_alldata.axz)==')
 
 doc = st.session_state.anasys_doc
 
@@ -26,15 +25,16 @@ if len(doc.Images) == 0:
     st.stop()
 
 # Display visualisation settings
-image_key_selected = st.selectbox(
+image_key_selected = st.multiselect(
     label='Select optical image to display',
-    options=doc.Images.keys(),
-    index=0
+    options=list(doc.Images.keys()),
+    default=list(doc.Images.keys())[:1],
 )
+
 gamma = st.slider('Gamma correction', min_value=0.01, max_value=2.0, value=1.0, step=0.05)
 show_spectra = st.checkbox('Show spectra', value=False)
 
-show_maps = st.checkbox('Show maps', value=False)
+show_maps = st.checkbox('Show maps', value=True)
 DEFAULT_OPTION = 'Default (all IR maps)'
 map_keys_to_show = st.multiselect(
     label='Show height maps',
@@ -43,22 +43,35 @@ map_keys_to_show = st.multiselect(
     disabled=not show_maps
 )
 
-image_selected = doc.Images[image_key_selected]
-data = image_selected.SampleBase64
-data = data[..., 0:3]/255  # Delete the alpha channel
-data = data**gamma
+if image_key_selected == []:
+    st.stop()
 
 fig, ax = plt.subplots()
-ax.imshow(data, extent=plotting.get_im_extent(image_selected))
-image_limits = ax.get_xlim(), ax.get_ylim()
-ax.set(xticks=[], yticks=[])
+ax.set_facecolor('black')
+img_xmin, img_xmax, img_ymin, img_ymax = np.inf, -np.inf, np.inf, -np.inf
+
+for key in image_key_selected:
+    # st.write(image_selected)
+    image_selected = doc.Images[key]
+    data = image_selected.SampleBase64
+    data = data[..., 0:3]/255  # Delete the alpha channel
+    data = data**gamma
+    
+    extent = plotting.get_im_extent(image_selected)
+    ax.imshow(data, extent=extent)
+    img_xmin = min(img_xmin, extent[0])
+    img_xmax = max(img_xmax, extent[1])
+    img_ymin = min(img_ymin, extent[2])
+    img_ymax = max(img_ymax, extent[3])
+
+ax.set(xticks=[], yticks=[], xlim=[img_xmin, img_xmax], ylim=[img_ymin, img_ymax])
 
 if show_spectra:
     ax.set(xlim=ax.get_xlim(), ylim=ax.get_ylim())
-    xs = [s['Location']['X'] for s in doc.RenderedSpectra.values()]
-    ys = [s['Location']['Y'] for s in doc.RenderedSpectra.values()]
+    xs = np.array([s['Location']['X'] for s in doc.RenderedSpectra.values()])
+    ys = np.array([s['Location']['Y'] for s in doc.RenderedSpectra.values()])
     labels = list(doc.RenderedSpectra.keys())
-    mask = (xs >= ax.get_xlim()[0]) & (xs <= ax.get_xlim()[1]) & (ys >= ax.get_ylim()[0]) & (ys <= ax.get_ylim()[1])
+    mask = (xs >= img_xmin) & (xs <= img_xmax) & (ys >= img_ymin) & (ys <= img_ymax)
     xs, ys, labels = np.array(xs)[mask], np.array(ys)[mask], np.array(labels)[mask]
     colors = plt.cm.viridis(np.linspace(0, 1, len(xs)))
     for x, y, label, color in zip(xs, ys, labels, colors):
@@ -76,11 +89,6 @@ if show_maps:
     for k in map_keys_to_show:
         m = doc.HeightMaps[k]
         plotting.plot_map(ax, m, cbar=False, sbar=False)
-        # ax.imshow(m.SampleBase64,
-        #           extent=plotting.get_im_extent(m), 
-        #           alpha=1, vmax = np.quantile(m.SampleBase64, .95))
-
-ax.set(xlim = image_limits[0], ylim = image_limits[1])
 
 plotting.add_scalebar(ax)
 st.pyplot(fig)

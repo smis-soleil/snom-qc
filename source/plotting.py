@@ -13,6 +13,7 @@ import colorsys
 from matplotlib.colors import to_rgb
 from io import BytesIO
 from matplotlib.backends.backend_pdf import PdfPages
+from utils import collect_map_qc_warnings
 
 
 def plot_map(ax, hmap, zorder=None, cbar=True, sbar=True):
@@ -94,7 +95,7 @@ def add_cbar(ax, mappable, label='', divider=None, location='left', extend='neit
     return cax
 
 
-def plot_map_qc(ax, map_trace, map_retrace):
+def plot_map_qc_panel(ax, map_trace, map_retrace):
     """
     Plot map with line profiles
     """
@@ -132,8 +133,8 @@ def plot_map_qc(ax, map_trace, map_retrace):
 
     # cax.yaxis.set_major_formatter(formatter)
 
-# @st.cache_resource
-def plot_maps_qc(file_hash, timestamp):
+@st.cache_resource
+def plot_maps_qc_at_timestamp(file_hash, timestamp, ncols = None):
     """
     Plot all maps at a given timestamp in one figure
     """
@@ -144,7 +145,6 @@ def plot_maps_qc(file_hash, timestamp):
     channels_at_timestamp = {m.DataChannel for m in doc.HeightMaps.values() if m.TimeStamp == timestamp}
     preferred_order = ['height', 'deflection', '//Func/Amplitude(x2_32,y2_32)', 'freq2', 'phase2']
     channels_at_timestamp = sorted(channels_at_timestamp, key=lambda x: preferred_order.index(x) if x in preferred_order else 999)
-    print(channels_at_timestamp)
 
     if len(channels_at_timestamp) == 0:
         st.write('No maps found at this timestamp')
@@ -152,7 +152,8 @@ def plot_maps_qc(file_hash, timestamp):
 
     # Create a grid of axes
     nmaps = len(channels_at_timestamp) 
-    fig, ax = plt.subplots(1, nmaps, figsize=(5 * nmaps, 5), gridspec_kw={'wspace': 0.25}, squeeze=False)
+    ncols = ncols if ncols is not None else nmaps
+    fig, ax = plt.subplots(1, ncols, figsize=(5 * ncols, 5), gridspec_kw={'wspace': 0.25}, squeeze=False)
 
     # Plot each map
     for i, channel in enumerate(channels_at_timestamp):
@@ -175,12 +176,15 @@ def plot_maps_qc(file_hash, timestamp):
             map_trace = maps_retrace[0]
             map_retrace = None
 
-        plot_map_qc(ax[0, i], map_trace, map_retrace)
+        plot_map_qc_panel(ax[0, i], map_trace, map_retrace)
+
+    for a in ax[0, nmaps:]:
+        a.axis('off')
 
     return fig
 
 @st.cache_resource
-def generate_mapqc_pdf(file_hash):
+def generate_mapqc_pdf(file_hash, ncols):
     """
     Generate a PDF file of the QC report, using an in_memory BytesIO buffer
     """
@@ -190,17 +194,58 @@ def generate_mapqc_pdf(file_hash):
     with BytesIO() as f:
         with PdfPages(f) as pdf:
             for ts in timestamps:
-                fig = plot_maps_qc(file_hash, ts)
-                pdf.savefig(fig, bbox_inches='tight')
-                plt.close(fig)
+
+                # First figure with map
+                fig1 = plot_maps_qc_at_timestamp(file_hash, ts, ncols)
+                main_ax = fig1.get_axes()[0]
+                bbox = main_ax.get_position()  # Gets bbox in figure coordinates
+                
+                # Convert bbox to pixels
+                x_pos = bbox.x0 * fig1.get_figwidth()
+                y_pos = bbox.y1 * fig1.get_figheight()
+
+                # Add figure to pdf
+                pdf.savefig(fig1)
+
+                # Check for QC issues
+                map_labels = [k for k, m in st.session_state.anasys_doc.HeightMaps.items() if m.TimeStamp == ts]
+                warnings = collect_map_qc_warnings(st.session_state.anasys_doc, map_labels)
+                if len(warnings) > 0:
+                
+                    # Create second figure with matching dimensions
+                    fig2 = plt.figure(figsize=(fig1.get_figwidth(), fig1.get_figheight()))
+                    
+                    # Add text at the aligned position
+                    timestamp_str = pd.to_datetime(ts).strftime('%Y-%m-%d %H:%M:%S')
+                    fig2.text(x_pos, y_pos, '\n - '.join(['Warnings:', *warnings]),
+                            ha='left', va='top',
+                            fontsize=12,
+                            transform=fig2.dpi_scale_trans)
+                    
+                    # Save the figures
+                    pdf.savefig(fig2)
+                    plt.close(fig2)
+
+                plt.close(fig1)
 
         return f.getvalue()
-
+    
+def sort_spectrum_datachannels(available_channels):
+    """
+    Sort data channels for plotting
+    """
+    preferred_order = ['IR Amplitude (mV)', 'PLL Frequency (kHz)', 'IR Phase (Deg)', 'Background']
+    return sorted(available_channels, key=lambda x: preferred_order.index(x) if x in preferred_order else 999)
 
 def plot_spectrum_qc(doc, selected_spectrum_label, channels_to_show, show_other_spectra=True, show_map=None, show_spectrum_labels=True):
     """
     Plot spectrum with all channels and localisation on a map
     """
+
+    channels_to_show = sort_spectrum_datachannels(channels_to_show)
+
+    # preferred_order = ['IR Amplitude (mV)', 'PLL Frequency (kHz)', 'IR Phase (Deg)', 'Background']
+    # channels_to_show = sorted(channels_to_show, key=lambda x: preferred_order.index(x) if x in preferred_order else 999)
 
     # Set up figure
     if len(doc.HeightMaps) == 0:

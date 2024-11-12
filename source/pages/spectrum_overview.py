@@ -12,7 +12,7 @@ import pandas as pd
 import numpy as np
 
 import utils
-from plotting import plot_spectrum_qc   # pylint: disable=E0401
+from plotting import plot_spectrum_qc, sort_spectrum_datachannels   # pylint: disable=E0401
 
 # Set up sidebar (navigation and uploader to change file)
 utils.setup_page_with_redirect(allowed_file_types=['axz', 'axd'])
@@ -25,6 +25,17 @@ st.write(
     '''
 )
 
+download_placeholder = st.empty()
+download_placeholder.download_button(
+    label='Generating PDF report',
+    data=b'1',
+    # file_name=f'{filename}_spectrumqc.pdf',
+    icon=':material/download:',
+    type='primary',
+    disabled=True,
+    key='download_button_disabled'
+)
+
 # TODO: check bug with 2024-07-24_TB012F_d2t56_maps.axz
 # TODO: display spectrum metadata
 
@@ -32,6 +43,7 @@ st.write(
 filename = st.session_state.file_name
 doc = st.session_state.anasys_doc
 spectrum_labels, data_channels_available = utils.get_list_of_spectra_and_data_channels(doc)
+data_channels_available = sort_spectrum_datachannels(data_channels_available)
 
 # Main content
 if len(spectrum_labels) == 0:
@@ -58,8 +70,8 @@ with st.expander('Display settings and metadata', expanded=False):
     map_to_show = None if map_to_show == DEFAULT_MAP_OPTION else map_to_show
 
     st.caption('Other options')
-    show_other_spectra = st.checkbox('Show other spectra', value=True)
-    show_spectrum_labels = st.checkbox('Show spectrum labels', value=True)
+    show_other_spectra = st.checkbox('Show all spectra in file', value=True)
+    show_spectrum_labels = st.checkbox('Show spectrum labels on image', value=True)
     
 
     download_button_container = st.empty()
@@ -118,10 +130,12 @@ else:
 st.empty().pyplot(plot_spectrum_qc(doc, highlight_spectrum, show_channels, show_other_spectra, map_to_show, show_spectrum_labels))
 
 
-st.download_button(
+download_placeholder.download_button(
     label='Download QC report as PDF',
     data=generate_pdf(),
     file_name=f'{filename}_spectrumqc.pdf',
     icon=':material/download:',
     type='primary'
 )
+
+st.warning('**TODO** QC control')
