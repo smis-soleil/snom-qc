@@ -7,7 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-from utils import setup_page_with_redirect, collect_map_qc_warnings
+from utils import setup_page_with_redirect, collect_map_qc_warnings, SessionState
 import plotting  # pylint: disable=E0401
 
 # Set up sidebar (navigation and uploader to change file)
@@ -30,7 +30,7 @@ def list_heightmap_groups(file_hash):
     Function to load map properties from uploaded file
     """
 
-    doc = st.session_state.anasys_doc
+    doc = SessionState().get_anasys_doc()
     map_dict = {m.Label: m.TimeStamp for m in doc.HeightMaps.values()}
     df = pd.DataFrame([
         {
@@ -43,7 +43,7 @@ def list_heightmap_groups(file_hash):
 
     return doc, df
 
-file_hash = st.session_state.file_hash
+file_hash = SessionState().get_file_hash()
 doc_uploaded, map_df = list_heightmap_groups(file_hash)
 
 # Main content
@@ -57,7 +57,7 @@ dowload_placeholder = st.empty()
 dowload_placeholder.download_button(
     label='Generating PDF report...',
     data=b'',
-    file_name=f'{st.session_state.file_name}_mapqc.pdf',
+    file_name=f'{SessionState().get_file_name()}_mapqc.pdf',
     type='primary',
     icon=':material/download:',
     disabled=True,
@@ -83,7 +83,7 @@ if all(len(map_warnings[ts]) == 0 for ts in map_df.index):
 dowload_placeholder.download_button(
     label='Download QC report as PDF',
     data=plotting.generate_mapqc_pdf(file_hash, ncols=ncols),
-    file_name=f'{st.session_state.file_name}_mapqc.pdf',
+    file_name=f'{SessionState().get_file_name()}_mapqc.pdf',
     type='primary',
     icon=':material/download:',
 )

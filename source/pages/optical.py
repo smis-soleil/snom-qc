@@ -15,10 +15,7 @@ utils.setup_page_with_redirect(allowed_file_types=['axz', 'axd'], streamlit_layo
 
 st.title('Optical image overview')
 
-# TODO
-st.warning('==choose new example file (eg 2024-08-08_TB012G_d3t16_alldata.axz or 2024-08-13_TB012G_wt3t2_alldata.axz)==')
-
-doc = st.session_state.anasys_doc
+doc = utils.SessionState().get_anasys_doc()
 
 if len(doc.Images) == 0:
     st.error('No optical images found. Choose another file')

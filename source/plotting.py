@@ -13,7 +13,7 @@ import colorsys
 from matplotlib.colors import to_rgb
 from io import BytesIO
 from matplotlib.backends.backend_pdf import PdfPages
-from utils import collect_map_qc_warnings
+from utils import collect_map_qc_warnings, SessionState
 
 
 def plot_map(ax, hmap, zorder=None, cbar=True, sbar=True):
@@ -139,7 +139,7 @@ def plot_maps_qc_at_timestamp(file_hash, timestamp, ncols = None):
     Plot all maps at a given timestamp in one figure
     """
 
-    doc = st.session_state.anasys_doc
+    doc = SessionState().get_anasys_doc()
 
     # Get all channels at the given timestamp
     channels_at_timestamp = {m.DataChannel for m in doc.HeightMaps.values() if m.TimeStamp == timestamp}
@@ -189,7 +189,8 @@ def generate_mapqc_pdf(file_hash, ncols):
     Generate a PDF file of the QC report, using an in_memory BytesIO buffer
     """
 
-    timestamps = {m.TimeStamp for m in st.session_state.anasys_doc.HeightMaps.values()}
+    doc = SessionState().get_anasys_doc()
+    timestamps = {m.TimeStamp for m in doc.HeightMaps.values()}
 
     with BytesIO() as f:
         with PdfPages(f) as pdf:
@@ -208,8 +209,8 @@ def generate_mapqc_pdf(file_hash, ncols):
                 pdf.savefig(fig1)
 
                 # Check for QC issues
-                map_labels = [k for k, m in st.session_state.anasys_doc.HeightMaps.items() if m.TimeStamp == ts]
-                warnings = collect_map_qc_warnings(st.session_state.anasys_doc, map_labels)
+                map_labels = [k for k, m in doc.HeightMaps.items() if m.TimeStamp == ts]
+                warnings = collect_map_qc_warnings(doc, map_labels)
                 if len(warnings) > 0:
                 
                     # Create second figure with matching dimensions

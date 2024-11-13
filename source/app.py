@@ -5,13 +5,16 @@ Run this file using `python -m streamlit run ./streamlit_app/app.py`
 '''
 
 import streamlit as st
-from utils import setup_page   # pylint: disable=E0401
+from utils import setup_page, SessionState   # pylint: disable=E0401
 
 setup_page(streamlit_layout='centered')
 
+if error := SessionState().get_error_message():
+    st.error(error, icon=':material/warning:')
+
 st.title('AXZ File Viewer')
 
-if st.session_state.anasys_doc:
+if SessionState().get_anasys_doc() is not None:
     st.info('Click on a page in the sidebar to view the uploaded document', icon=':material/keyboard_double_arrow_left:')
 
 st.write(

@@ -36,12 +36,9 @@ download_placeholder.download_button(
     key='download_button_disabled'
 )
 
-# TODO: check bug with 2024-07-24_TB012F_d2t56_maps.axz
-# TODO: display spectrum metadata
-
 # Get all spectrum labels and data channels
-filename = st.session_state.file_name
-doc = st.session_state.anasys_doc
+filename = utils.SessionState().get_file_name()
+doc = utils.SessionState().get_anasys_doc()
 spectrum_labels, data_channels_available = utils.get_list_of_spectra_and_data_channels(doc)
 data_channels_available = sort_spectrum_datachannels(data_channels_available)
 
@@ -77,7 +74,7 @@ with st.expander('Display settings and metadata', expanded=False):
     download_button_container = st.empty()
 
     # Show metadata
-    metadata_df = utils.parse_spectrum_metadata(st.session_state.file_hash)
+    metadata_df = utils.parse_spectrum_metadata(utils.SessionState().get_file_hash())
     st.write('**Spectrum metadata**')
     st.caption('Select properties to display')
     selected_metadata_tags = st.multiselect(
@@ -137,5 +134,3 @@ download_placeholder.download_button(
     icon=':material/download:',
     type='primary'
 )
-
-st.warning('**TODO** QC control')

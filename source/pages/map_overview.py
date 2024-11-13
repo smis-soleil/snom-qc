@@ -24,7 +24,7 @@ st.write(
 )
 
 # Parse heightmap metadata
-doc, df_heightmap_metadata = utils.parse_map_metadata(st.session_state.file_hash)
+doc, df_heightmap_metadata = utils.parse_map_metadata(utils.SessionState().get_file_hash())
 
 # Main content
 if len(doc.HeightMaps) == 0:

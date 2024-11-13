@@ -19,6 +19,85 @@ import os
 
 DEV_MODE = os.environ.get('DEV_MODE', False)
 
+class SessionState:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(SessionState, cls).__new__(cls)
+            cls._instance._initialize()
+        return cls._instance
+
+    def _initialize(self):
+        if 'anasys_doc' not in st.session_state:
+            st.session_state.anasys_doc = None
+
+        if 'file_name' not in st.session_state:
+            st.session_state.file_name = None
+
+        if 'file_extension' not in st.session_state:
+            st.session_state.file_extension = None
+
+        if 'file_hash' not in st.session_state:
+            st.session_state.file_hash = None
+
+        if 'file_upload_widget_key' not in st.session_state:
+            st.session_state.file_upload_widget_key = 'upload_widget'
+
+        if 'error_message' not in st.session_state:
+            st.session_state.error_message = None
+
+    def get_anasys_doc(self):
+        self._initialize()
+        return st.session_state.anasys_doc
+
+    def get_file_name(self):
+        self._initialize()
+        return st.session_state.file_name
+
+    def get_file_hash(self):
+        self._initialize()
+        return st.session_state.file_hash
+    
+    def get_file_extension(self):
+        self._initialize()
+        return st.session_state.file_extension
+
+    def get_file_upload_widget_key(self):
+        self._initialize()
+        return st.session_state.file_upload_widget_key
+    
+    def get_error_message(self):
+        self._initialize()
+        return st.session_state.error_message
+    
+    def get_upload_widget(self):
+        self._initialize()
+        return st.session_state[st.session_state.file_upload_widget_key]
+
+    def set_anasys_doc(self, doc, fname, fhash, fext):
+        self._initialize()
+        st.session_state.anasys_doc = doc
+        st.session_state.file_name = fname
+        st.session_state.file_hash = fhash
+        st.session_state.file_extension = fext
+
+        # Clear error state, if any
+        st.session_state.error_message = None
+
+    def set_file_upload_widget_key(self, value):
+        self._initialize()
+        st.session_state.file_upload_widget_key = value
+
+    def set_error_message(self, value):
+        self._initialize()
+        st.session_state.anasys_doc = None
+        st.session_state.file_name = None
+        st.session_state.file_hash = None
+        st.session_state.file_extension = None
+        st.session_state.error_message = value
+
+
 def setup_page(streamlit_layout='centered'):
     """ 
     Set up a page's sidebar with navitation links and file upload widget
@@ -31,8 +110,10 @@ def setup_page(streamlit_layout='centered'):
 
     # Make sure all keys are initialised (to None if need be)
     # and get their values
-    initialise_session_state()
-    full_file = st.session_state.file_extension in ['axz', 'axd']
+    ss = SessionState()
+
+
+    full_file = ss.get_file_extension() in ['axz', 'axd']
 
     with st.sidebar:
 
@@ -69,31 +150,20 @@ def setup_page_with_redirect(allowed_file_types, streamlit_layout='centered'):
     Redirects to home page if not
     """
 
-    initialise_session_state()
-    if st.session_state.file_extension not in allowed_file_types:
+    
+    if SessionState().get_file_extension() not in allowed_file_types:
         # if st.session_state.file_extension == 'irb':
         #     st.switch_page('pages/background_overview.py')
         st.switch_page('app.py')
 
+    # If page in error state, redirect to home page
+    if SessionState().get_error_message():
+        st.switch_page('app.py')
+
+
     # Defer further setup to setup_page()
     setup_page(streamlit_layout=streamlit_layout)
 
-def initialise_session_state():
-    """
-    Initialise session state variables
-    """
-
-    if 'anasys_doc' not in st.session_state:
-        st.session_state.anasys_doc = None
-
-    if 'file_name' not in st.session_state:
-        st.session_state.file_name = None
-
-    if 'file_extension' not in st.session_state:
-        st.session_state.file_extension = None
-
-    if 'file_upload_widget_key' not in st.session_state:
-        st.session_state.file_upload_widget_key = 'upload_widget'
 
 def parse_file(file):
     """
@@ -111,10 +181,7 @@ def parse_file(file):
     else:
         doc = anasysdoc.AnasysDoc(f_data)
 
-    st.session_state.anasys_doc = doc
-    st.session_state.file_name = file.name
-    st.session_state.file_hash = f_hash
-    st.session_state.file_extension = file.name.split('.')[-1]
+    SessionState().set_anasys_doc(doc, file.name, f_hash, file.name.split('.')[-1])
 
 
 def upload_example_file():
@@ -124,7 +191,9 @@ def upload_example_file():
 
     # Changing the key of the upload widget resets it to an empty state on a script rerun
     # Effectively, this clears the previously uploaded file
-    st.session_state.file_upload_widget_key += "'"
+    SessionState().set_file_upload_widget_key(
+        SessionState().get_file_upload_widget_key() + "1"
+    )
 
     with open('source/example.axz', 'rb') as f:
         parse_file(f)
@@ -137,9 +206,9 @@ def initialise_upload_widget():
     - button to load example file
     """
 
-    if st.session_state.file_name is not None:
+    if SessionState().get_file_name() is not None:
         st.info(
-            st.session_state.file_name,
+            SessionState().get_file_name(),
             # + '\n' + st.session_state.file_hash,
             icon=':material/description:'
         )
@@ -149,24 +218,17 @@ def initialise_upload_widget():
     def on_upload():
 
         try:
-            file = st.session_state[st.session_state.file_upload_widget_key]
+            file = SessionState().get_upload_widget()
             # When the uploader is cleared by the user, `file` will be None
             if file is not None:
                 parse_file(file)
 
-        # TODO: better error handling
         except Exception as e:
-            pass
-        #     st.session_state.anasys_doc = None
-        #     st.session_state.file_name = None
-        #     st.session_state.file_hash = None
-        #     st.session_state.file_extension = None
-        #     st.switch_page('app.py')
-        #     st.toast(f'Error: {e}', icon=':material/error:')
-
+            print(f'Error encountered on file upload: {e}')
+            SessionState().set_error_message('Error encountered on file upload. Is this a valid Anasys file?')
     
     st.file_uploader('Upload a file', type=['axz', 'axd'], label_visibility='collapsed',
-                     on_change=on_upload, key=st.session_state.file_upload_widget_key)
+                     on_change=on_upload, key=SessionState().get_file_upload_widget_key())
 
     st.button('Load example file', on_click=upload_example_file)
 
@@ -192,7 +254,7 @@ def parse_map_metadata(file_hash):  # pylint: disable=W0613
     """
 
     # Grab document from session state
-    doc = st.session_state.anasys_doc
+    doc = SessionState().get_anasys_doc()
 
     # Define map of tags to display by default, and functions to extract them
     map_important_tags = {
@@ -233,9 +295,9 @@ def parse_map_metadata(file_hash):  # pylint: disable=W0613
 
     return doc, df
 
-# @st.cache_resource
+@st.cache_resource
 def parse_spectrum_metadata(file_hash):  # pylint: disable=W0613
-    doc = st.session_state.anasys_doc
+    doc = SessionState().get_anasys_doc()
 
     # Define map of tags to display by default, and functions to extract them
     spectrum_important_tags = {
@@ -294,7 +356,7 @@ def map_qc_check(hmap):
     warnings = []
 
     if hmap.DataChannel == 'deflection':
-        # TODO: Check that deflection raw values are reported (mean is close to setpoint)
+        # Check that deflection raw values are reported (mean is close to setpoint)
         defmean = np.mean(hmap.SampleBase64)
         setpoint = float(hmap.Tags['Setpoint'].split(' ')[0])
         if DEV_MODE or np.abs(defmean - setpoint) > 0.1:
