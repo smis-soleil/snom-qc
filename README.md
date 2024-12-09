@@ -22,7 +22,7 @@ The example dataset can be found at [source/example.axz](source/example.axz).
 
 ## Citing this work
 
-This work is licensed under a Creative Commons Attribution 4.0 International License [(CC BY 4.0)][license-link]. If you use this code in your work, please cite the paper, once published. When explicitly referencing this code, use the DOI assigned to the repository: [10.6084/m9.figshare.27889113][doi-repo-link].
+This work is licensed under a Creative Commons Attribution 4.0 International License [(CC BY 4.0)][license-link]. If you use this code in your work, please cite the paper, once published. When explicitly referencing this code, use the DOI assigned to the repository: [10.6084/m9.figshare.27991898][doi-repo-link].
 
 [license-link]:       http://creativecommons.org/licenses/by/4.0/
 [license-image]:      https://i.creativecommons.org/l/by/4.0/88x31.png
@@ -31,7 +31,7 @@ This work is licensed under a Creative Commons Attribution 4.0 International Lic
 [application-link]: https://anasys-python-tools-gui.streamlit.app
 [application-shield]: https://img.shields.io/badge/Open_on_Streamlit-tomato
 
-[doi-repo-shield]:  https://img.shields.io/badge/DOI_(repository)-10.6084/m9.figshare.27889113-deepskyblue
-[doi-repo-link]: https://doi.org/10.6084/m9.figshare.27889113
+[doi-repo-shield]:  https://img.shields.io/badge/DOI_(repository)-10.6084/m9.figshare.27991898-deepskyblue
+[doi-repo-link]: https://doi.org/10.6084/m9.figshare.27991898
 
 [doi-paper-shield]:  https://img.shields.io/badge/DOI_(paper)-pending-gainsboro
