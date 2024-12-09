@@ -28,7 +28,7 @@ image_key_selected = st.multiselect(
     default=list(doc.Images.keys())[:1],
 )
 
-gamma = st.slider('Gamma correction', min_value=0.01, max_value=2.0, value=1.0, step=0.05)
+gamma = st.slider('Gamma correction (brightness and contrast)', min_value=0.01, max_value=2.0, value=1.0, step=0.05)
 show_spectra = st.checkbox('Show spectra', value=False)
 
 show_maps = st.checkbox('Show maps', value=True)
