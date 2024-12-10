@@ -282,6 +282,11 @@ def plot_spectrum_qc(doc, selected_spectrum_label, channels_to_show, show_other_
             spec_axes.append(new_ax)
             new_ax.set_ylabel(channels_to_show[i + 1], c=f'C{i + 1}')
 
+    # Put the first axes on top and give them a transparent background
+    for i, a in enumerate(spec_axes):
+        a.set_zorder(-i)
+        a.set_facecolor('none')
+
     # Desaturate colors
     def desat(color, fac_s = .6, fac_l = 1.5):
         rgb = to_rgb(color)
