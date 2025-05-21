@@ -115,7 +115,7 @@ class SessionStateSingleton:
             if key not in st.session_state.cached_image_qa:
                 # Get the map metadata
                 st.session_state.cached_image_qa[key] = \
-                    plot_maps_qc_at_timestamp(self.get_file_hash(), timestamp, ncols=ncols)
+                    plot_maps_qc_at_timestamp(timestamp, ncols=ncols)
             return st.session_state.cached_image_qa[key]
         
         if 'allmaps' not in st.session_state.cached_image_qa:
@@ -278,11 +278,11 @@ def setup_page(streamlit_layout='centered'):
         st.page_link("app.py", label="Home")
         st.page_link(
             'pages/optical.py',
-            label='Optical images',
+            label='Optical Images',
             disabled=not full_file)
         st.page_link(
             'pages/map_overview.py',
-            label='Map overview',
+            label='Map Overview',
             disabled=not full_file)
         st.page_link(
             'pages/map_qc.py',
@@ -290,7 +290,7 @@ def setup_page(streamlit_layout='centered'):
             disabled=not full_file)
         st.page_link(
             'pages/spectrum_overview.py',
-            label='Display spectra',
+            label='Spectra',
             disabled=not full_file)
 
         st.divider()
