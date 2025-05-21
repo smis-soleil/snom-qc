@@ -6,6 +6,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 
 import utils
+from utils import SessionStateSingleton
 
 # Set up sidebar (navigation and uploader to change file)
 utils.setup_page_with_redirect(allowed_file_types=['axz', 'axd'])
@@ -23,8 +24,8 @@ st.write(
 )
 
 # Parse heightmap metadata
-doc = utils.SessionStateSingleton().get_anasys_doc()
-df_heightmap_metadata = utils.SessionStateSingleton().get_cached_heightmap_metadata()
+doc = SessionStateSingleton().get_anasys_doc()
+df_heightmap_metadata = SessionStateSingleton().get_cached_heightmap_metadata()
 
 # Main content
 if len(doc.HeightMaps) == 0:

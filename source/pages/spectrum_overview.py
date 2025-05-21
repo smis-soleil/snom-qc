@@ -13,6 +13,7 @@ import numpy as np
 import xarray as xr
 
 import utils
+from utils import SessionStateSingleton
 
 # Set up sidebar (navigation and uploader to change file)
 utils.setup_page_with_redirect(allowed_file_types=['axz', 'axd'])
@@ -38,7 +39,7 @@ def button_download_qc(placeholder, key):
     placeholder.download_button(
         label=buttontext,
         data=buttondata,
-        file_name=f'{utils.SessionStateSingleton().get_file_name().replace(".", "_")}_spectrumqc.pdf',
+        file_name=f'{SessionStateSingleton().get_file_name().replace(".", "_")}_spectrumqc.pdf',
         type='primary',
         icon=':material/picture_as_pdf:',
         disabled=buttondisabled,
@@ -58,7 +59,7 @@ def button_download_csv(placeholder, key):
     placeholder.download_button(
         label=buttontext,
         data=buttondata,
-        file_name=f'{utils.SessionStateSingleton().get_file_name().replace(".", "_")}_spectrumdata.csv',
+        file_name=f'{SessionStateSingleton().get_file_name().replace(".", "_")}_spectrumdata.csv',
         type='secondary',
         icon=':material/table_view:',
         disabled=buttondisabled,
@@ -72,8 +73,8 @@ button_download_qc(download_placeholder, key = 2)
 button_download_csv(csv_placeholder, 3)
 
 # Get all spectrum labels and data channels
-filename = utils.SessionStateSingleton().get_file_name()
-doc = utils.SessionStateSingleton().get_anasys_doc()
+filename = SessionStateSingleton().get_file_name()
+doc = SessionStateSingleton().get_anasys_doc()
 spectrum_labels, data_channels_available = utils.get_list_of_spectra_and_data_channels(doc)
 data_channels_available = utils.sort_spectrum_datachannels(data_channels_available)
 
@@ -107,7 +108,7 @@ with st.expander('Display settings and metadata', expanded=False):
     download_button_container = st.empty()
 
     # Show metadata
-    metadata_df = utils.SessionStateSingleton().get_cached_spectrum_metadata()
+    metadata_df = SessionStateSingleton().get_cached_spectrum_metadata()
     st.write('**Spectrum metadata**')
     st.caption('Select properties to display')
     selected_metadata_tags = st.multiselect(
@@ -141,13 +142,13 @@ else:
         value=spectrum_labels[0]
     )
 
-st.empty().pyplot(utils.SessionStateSingleton().get_cached_spectrum_qa(
+st.empty().pyplot(SessionStateSingleton().get_cached_spectrum_qa(
     highlight_spectrum, show_channels, show_other_spectra, 
     map_to_show, show_spectrum_labels
 ))
 
 # If the report files were not generated yet, do that and replace the buttons
-utils.SessionStateSingleton().get_cached_spectrum_qa_pdf()
+SessionStateSingleton().get_cached_spectrum_qa_pdf()
 button_download_qc(download_placeholder, key = 1)
-utils.SessionStateSingleton().get_cached_spectrum_csv()
+SessionStateSingleton().get_cached_spectrum_csv()
 button_download_csv(csv_placeholder, key = 4)

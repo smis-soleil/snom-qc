@@ -8,13 +8,14 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import utils
+from utils import SessionStateSingleton
 
 # Set up sidebar (navigation and uploader to change file)
 utils.setup_page_with_redirect(allowed_file_types=['axz', 'axd'], streamlit_layout='centered')
 
 st.title('Optical image overview')
 
-doc = utils.SessionStateSingleton().get_anasys_doc()
+doc = SessionStateSingleton().get_anasys_doc()
 
 if len(doc.Images) == 0:
     st.error('No optical images found. Choose another file')
