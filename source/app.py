@@ -19,23 +19,26 @@ if SessionStateSingleton().get_anasys_doc() is not None:
 
 st.write(
     '''
-    This application is designed to view and analyse Bruker/Anasys .axz files 
+    This application is designed to view and analyse ruker/Anasys .axz files 
     (.axd and .irb files are also supported), without using Anasys Studio software. 
     This enables everyone to view and analyse the data, even without access to a 
     nanoIR microscope.
 
     The app is divided into several pages, accessible via the sidebar on the left. 
     The pages are as follows:
-         
-    1. **Map overview.** Quickly view all maps in the document, and access all 
+
+    1. **Optical Images.** View all optical images in the document, and correlate
+    these with measurement locations of maps and spectra.  
+    2. **Map Overview.** Quickly view all maps in the document and access all 
     metadata associated with each map.
-    2. **Map QC.** Offers a quality control report for all maps in the document, 
+    3. **Map QC.** Offers a quality control report for all maps in the document, 
     grouped by time of acquisition. This is useful for checking the quality of the 
     raw map data. The app performs some automatic checks of data quality and will 
     warn the user if it finds any possible issues. It is possible to generate a 
     PDF report of the QC data. 
-    3. **Display spectra.** View all spectra in the document, and access metadata 
+    4. **Spectra.** View all spectra in the document, and access metadata 
     associated with each spectrum. Like maps, a QC report can be generated and 
-    possible issues with data quality are highlighted.
+    possible issues with data quality are highlighted. Spectra can also be exported
+    as a CSV file for further processing.
     '''
 )

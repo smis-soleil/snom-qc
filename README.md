@@ -1,11 +1,11 @@
-# AXZ viewer: a web application to visualize un-processed AFM-IR data
+# AXZ viewer: a web application to visualize unprocessed AFM-IR data
 
 [![Application][application-shield]][application-link]
 [![CC BY 4.0][license-shield]][license-link]
 [![DOI (repository)][doi-repo-shield]][doi-repo-link]
 ![DOI (paper)][doi-paper-shield]
 
-This repository contains the source code for the web application published in **Duverger et al. (in submission)**, allowing users to view unprocessed AFM-IR data and metadata from .axz files. 
+This repository contains the source code for the web application published in **Duverger et al. (in revision)**, allowing users to view unprocessed AFM-IR data and metadata from .axz files. 
 
 The application is accessible on [streamlit.io][application-link]. The code can be ran locally by executing the following commands, assuming git and Python (version 3.12) are installed:
 

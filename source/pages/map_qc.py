@@ -61,7 +61,7 @@ map_warnings = {
 }
 
 for ts in map_df.index:
-    st.pyplot(SessionStateSingleton().get_cached_image_qa(ts, ncols=ncols))
+    st.pyplot(SessionStateSingleton().get_cached_image_qa(ts, ncols))
     if len(map_warnings[ts]) > 0:
         st.warning(icon=':material/warning:', body='The following potential issues were detected:\n\n* ' + '\n\n* '.join(map_warnings[ts]))
 

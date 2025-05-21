@@ -120,7 +120,7 @@ class SessionStateSingleton:
         
         if 'allmaps' not in st.session_state.cached_image_qa:
             st.session_state.cached_image_qa['allmaps'] = \
-                generate_mapqc_pdf(self.get_file_hash(), ncols=ncols)
+                generate_mapqc_pdf(ncols=ncols)
             
         return st.session_state.cached_image_qa['allmaps']
     
@@ -746,7 +746,7 @@ def plot_maps_qc_at_timestamp(timestamp, ncols = None):
 
     return fig
 
-def generate_mapqc_pdf(file_hash, ncols):
+def generate_mapqc_pdf(ncols):
     """
     Generate a PDF file of the QC report, using an in_memory BytesIO buffer
     """
@@ -759,7 +759,7 @@ def generate_mapqc_pdf(file_hash, ncols):
             for ts in timestamps:
 
                 # First figure with map
-                fig1 = plot_maps_qc_at_timestamp(file_hash, ts, ncols)
+                fig1 = plot_maps_qc_at_timestamp(ts, ncols)
                 main_ax = fig1.get_axes()[0]
                 bbox = main_ax.get_position()  # Gets bbox in figure coordinates
                 
