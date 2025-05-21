@@ -8,14 +8,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import utils
-import plotting  # pylint: disable=E0401
 
 # Set up sidebar (navigation and uploader to change file)
 utils.setup_page_with_redirect(allowed_file_types=['axz', 'axd'], streamlit_layout='centered')
 
 st.title('Optical image overview')
 
-doc = utils.SessionState().get_anasys_doc()
+doc = utils.SessionStateSingleton().get_anasys_doc()
 
 if len(doc.Images) == 0:
     st.error('No optical images found. Choose another file')
@@ -54,7 +53,7 @@ for key in image_key_selected:
     data = data[..., 0:3]/255  # Delete the alpha channel
     data = data**gamma
     
-    extent = plotting.get_im_extent(image_selected)
+    extent = utils.get_im_extent(image_selected)
     ax.imshow(data, extent=extent)
     img_xmin = min(img_xmin, extent[0])
     img_xmax = max(img_xmax, extent[1])
@@ -85,7 +84,7 @@ if show_maps:
                             if k != DEFAULT_OPTION}
     for k in map_keys_to_show:
         m = doc.HeightMaps[k]
-        plotting.plot_map(ax, m, cbar=False, sbar=False)
+        utils.plot_map(ax, m, cbar=False, sbar=False)
 
-plotting.add_scalebar(ax)
+utils.add_scalebar(ax)
 st.pyplot(fig)

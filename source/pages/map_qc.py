@@ -7,11 +7,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 
-from utils import setup_page_with_redirect, collect_map_qc_warnings, SessionState
-import plotting  # pylint: disable=E0401
+import utils
 
 # Set up sidebar (navigation and uploader to change file)
-setup_page_with_redirect(allowed_file_types=['axz', 'axd'])
+utils.setup_page_with_redirect(allowed_file_types=['axz', 'axd'])
 
 st.title('Map QC report')
 st.write(
@@ -23,28 +22,9 @@ st.write(
     '''
 )
 
-# Load map properties from uploaded file
-@st.cache_resource
-def list_heightmap_groups(file_hash):
-    """
-    Function to load map properties from uploaded file
-    """
-
-    doc = SessionState().get_anasys_doc()
-    map_dict = {m.Label: m.TimeStamp for m in doc.HeightMaps.values()}
-    df = pd.DataFrame([
-        {
-            'ts': ts,
-            'Timestamp': pd.to_datetime(ts).strftime('%Y-%m-%d %H:%M:%S'),
-            'Map Labels': set(m for m, v in map_dict.items() if v == ts)
-        }
-        for ts in set(map_dict.values())
-    ]).set_index('ts').sort_index()
-
-    return doc, df
-
-file_hash = SessionState().get_file_hash()
-doc_uploaded, map_df = list_heightmap_groups(file_hash)
+file_hash = utils.SessionStateSingleton().get_file_hash()
+doc_uploaded = utils.SessionStateSingleton().get_anasys_doc()
+map_df = utils.SessionStateSingleton().get_cached_heightmap_groups()
 
 # Main content
 if len(doc_uploaded.HeightMaps) == 0:
@@ -54,23 +34,33 @@ if len(doc_uploaded.HeightMaps) == 0:
 ncols = max(map_df['Map Labels'].apply(len))
 
 dowload_placeholder = st.empty()
+
+if 'allmaps' in st.session_state.cached_image_qa:
+    buttondata = st.session_state.cached_image_qa['allmaps']
+    buttonddisabled = False
+    buttontext = 'Download QC report as PDF'
+else:
+    buttondata = b''
+    buttonddisabled = True
+    buttontext = 'Generating PDF report...'
+
 dowload_placeholder.download_button(
-    label='Generating PDF report...',
-    data=b'',
-    file_name=f'{SessionState().get_file_name()}_mapqc.pdf',
+    label=buttontext,
+    data=buttondata,
+    file_name=f'{utils.SessionStateSingleton().get_file_name().replace('.', '_')}_mapqc.pdf',
     type='primary',
     icon=':material/download:',
-    disabled=True,
+    disabled=buttonddisabled,
     key='disabled-button'
 )
 
 map_warnings = {
-    ts: collect_map_qc_warnings(doc_uploaded, map_df.loc[ts, 'Map Labels'])
+    ts: utils.collect_map_qc_warnings(doc_uploaded, map_df.loc[ts, 'Map Labels'])
     for ts in map_df.index
 }
 
 for ts in map_df.index:
-    st.pyplot(plotting.plot_maps_qc_at_timestamp(file_hash, ts, ncols=ncols))
+    st.pyplot(utils.SessionStateSingleton().get_cached_image_qa(ts, ncols=ncols))
     if len(map_warnings[ts]) > 0:
         st.warning(icon=':material/warning:', body='The following potential issues were detected:\n\n* ' + '\n\n* '.join(map_warnings[ts]))
 
@@ -78,15 +68,11 @@ if all(len(map_warnings[ts]) == 0 for ts in map_df.index):
     st.success('No potential issues were detected.', icon=':material/check_circle:')
 
 # Plot QC maps
-
-# dowload_placeholder.empty()
-dowload_placeholder.download_button(
-    label='Download QC report as PDF',
-    data=plotting.generate_mapqc_pdf(file_hash, ncols=ncols),
-    file_name=f'{SessionState().get_file_name()}_mapqc.pdf',
-    type='primary',
-    icon=':material/download:',
-)
-
-# with st.spinner('Plotting data...'):
-#     st.pyplot(plotting.plot_maps_qc(file_hash, selected_timestamp))
+if 'allmaps' not in st.session_state.cached_image_qa:
+    dowload_placeholder.download_button(
+        label='Download QC report as PDF',
+        data=utils.SessionStateSingleton().get_cached_image_qa(allmaps=True, ncols=ncols),
+        file_name=f'{utils.SessionStateSingleton().get_file_name().replace('.', '_')}_mapqc.pdf',
+        type='primary',
+        icon=':material/download:',
+    )

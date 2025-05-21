@@ -10,9 +10,9 @@ import matplotlib.pyplot as plt
 import streamlit_shortcuts
 import pandas as pd
 import numpy as np
+import xarray as xr
 
 import utils
-from plotting import plot_spectrum_qc, sort_spectrum_datachannels   # pylint: disable=E0401
 
 # Set up sidebar (navigation and uploader to change file)
 utils.setup_page_with_redirect(allowed_file_types=['axz', 'axd'])
@@ -25,28 +25,62 @@ st.write(
     '''
 )
 
-download_placeholder = st.empty()
-download_placeholder.download_button(
-    label='Generating PDF report',
-    data=b'1',
-    # file_name=f'{filename}_spectrumqc.pdf',
-    icon=':material/download:',
-    type='primary',
-    disabled=True,
-    key='download_button_disabled'
-)
+def button_download_qc(placeholder, key):
+    if 'all' in st.session_state.cached_spectrum_qa:
+        buttondata = st.session_state.cached_spectrum_qa['all']
+        buttondisabled = False
+        buttontext = 'Download QC report'
+    else:
+        buttondata = b''
+        buttondisabled = True
+        buttontext = 'Generating QC report...'
+    
+    placeholder.download_button(
+        label=buttontext,
+        data=buttondata,
+        file_name=f'{utils.SessionStateSingleton().get_file_name().replace(".", "_")}_spectrumqc.pdf',
+        type='primary',
+        icon=':material/picture_as_pdf:',
+        disabled=buttondisabled,
+        key=key,
+    )
+
+def button_download_csv(placeholder, key):
+    if st.session_state.cached_spectrum_csv is not None:
+        buttondata = st.session_state.cached_spectrum_csv
+        buttondisabled = False
+        buttontext = 'Download all spectra as CSV'
+    else:
+        buttondata = b''
+        buttondisabled = True
+        buttontext = 'Generating CSV export...'
+    
+    placeholder.download_button(
+        label=buttontext,
+        data=buttondata,
+        file_name=f'{utils.SessionStateSingleton().get_file_name().replace(".", "_")}_spectrumdata.csv',
+        type='secondary',
+        icon=':material/table_view:',
+        disabled=buttondisabled,
+        key=key
+    )
+col1, col2 = st.columns(2, gap='small')
+
+download_placeholder = col1.empty()
+csv_placeholder = col2.empty()
+button_download_qc(download_placeholder, key = 2)
+button_download_csv(csv_placeholder, 3)
 
 # Get all spectrum labels and data channels
-filename = utils.SessionState().get_file_name()
-doc = utils.SessionState().get_anasys_doc()
+filename = utils.SessionStateSingleton().get_file_name()
+doc = utils.SessionStateSingleton().get_anasys_doc()
 spectrum_labels, data_channels_available = utils.get_list_of_spectra_and_data_channels(doc)
-data_channels_available = sort_spectrum_datachannels(data_channels_available)
+data_channels_available = utils.sort_spectrum_datachannels(data_channels_available)
 
 # Main content
 if len(spectrum_labels) == 0:
     st.error('No spectra found. Choose another file')
     st.stop()
-
 
 # Other options
 with st.expander('Display settings and metadata', expanded=False):
@@ -54,7 +88,6 @@ with st.expander('Display settings and metadata', expanded=False):
     st.write('**Display settings**')
     st.caption('Channels to display')
     show_channels = st.multiselect('Choose channels to display:', data_channels_available, default=data_channels_available, label_visibility='collapsed')
-    # cols = st.columns(3, vertical_alignment='bottom', gap='large')
 
     st.caption('Select map to display')
     DEFAULT_MAP_OPTION = 'Default (most recent map before spectrum acquisition)'
@@ -74,7 +107,7 @@ with st.expander('Display settings and metadata', expanded=False):
     download_button_container = st.empty()
 
     # Show metadata
-    metadata_df = utils.parse_spectrum_metadata(utils.SessionState().get_file_hash())
+    metadata_df = utils.SessionStateSingleton().get_cached_spectrum_metadata()
     st.write('**Spectrum metadata**')
     st.caption('Select properties to display')
     selected_metadata_tags = st.multiselect(
@@ -95,22 +128,6 @@ with st.expander('Display settings and metadata', expanded=False):
     )
 
 
-@st.cache_resource
-def generate_pdf():
-    """
-    Generate a PDF file of the QC report, using an in_memory BytesIO buffer
-    """
-
-    with BytesIO() as f:
-        with PdfPages(f) as pdf:
-            for l in spectrum_labels:
-                fig = plot_spectrum_qc(doc, l, channels_to_show=data_channels_available, show_other_spectra=False, show_spectrum_labels=False)
-                pdf.savefig(fig, bbox_inches='tight')
-                plt.close(fig)
-
-        return f.getvalue()
-
-
 # st.divider()
 if len(spectrum_labels) == 1:
     highlight_spectrum = spectrum_labels[0]
@@ -124,13 +141,13 @@ else:
         value=spectrum_labels[0]
     )
 
-st.empty().pyplot(plot_spectrum_qc(doc, highlight_spectrum, show_channels, show_other_spectra, map_to_show, show_spectrum_labels))
+st.empty().pyplot(utils.SessionStateSingleton().get_cached_spectrum_qa(
+    highlight_spectrum, show_channels, show_other_spectra, 
+    map_to_show, show_spectrum_labels
+))
 
-
-download_placeholder.download_button(
-    label='Download QC report as PDF',
-    data=generate_pdf(),
-    file_name=f'{filename}_spectrumqc.pdf',
-    icon=':material/download:',
-    type='primary'
-)
+# If the report files were not generated yet, do that and replace the buttons
+utils.SessionStateSingleton().get_cached_spectrum_qa_pdf()
+button_download_qc(download_placeholder, key = 1)
+utils.SessionStateSingleton().get_cached_spectrum_csv()
+button_download_csv(csv_placeholder, key = 4)

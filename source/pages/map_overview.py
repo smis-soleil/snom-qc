@@ -6,7 +6,6 @@ import streamlit as st
 import matplotlib.pyplot as plt
 
 import utils
-from plotting import plot_map  # pylint: disable=E0401
 
 # Set up sidebar (navigation and uploader to change file)
 utils.setup_page_with_redirect(allowed_file_types=['axz', 'axd'])
@@ -24,7 +23,8 @@ st.write(
 )
 
 # Parse heightmap metadata
-doc, df_heightmap_metadata = utils.parse_map_metadata(utils.SessionState().get_file_hash())
+doc = utils.SessionStateSingleton().get_anasys_doc()
+df_heightmap_metadata = utils.SessionStateSingleton().get_cached_heightmap_metadata()
 
 # Main content
 if len(doc.HeightMaps) == 0:
@@ -81,7 +81,7 @@ ax = ax.flatten()
 i = 0  # this makes sure i is defined outside the loop
 for i, label in enumerate(selected_map_labels):
     hmap = doc.HeightMaps[label]
-    plot_map(ax[i], hmap)
+    utils.plot_map(ax[i], hmap)
     ax[i].annotate(hmap.Tags['IRWavenumber'], (0.05, 0.95), xycoords='axes fraction', ha='left', va='top', weight='bold', c='w')
     ax[i].set_title(label)
     ax[i].set(xticks=[], yticks=[])
