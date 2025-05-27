@@ -22,8 +22,6 @@ spectra = xr.concat(dim = 'si', objs = [
     for s in doc.RenderedSpectra.values()
 ])
 
-table_placeholder = st.empty()
-
 channel = st.selectbox(
     label='Choose channel to export',
     options=data_channels_available,
@@ -39,7 +37,6 @@ spectra_df = spectra.to_pandas().assign(
     Y = spectra['Location.Y'].values,
 ).set_index(['Label', 'X', 'Y'])
 
-table_placeholder.dataframe(spectra_df, use_container_width=True)
 
 dlname = st.text_input(
     label='File name for download',
@@ -56,3 +53,5 @@ st.download_button(
     key='download_spectra_csv',
     type='primary',
 )
+
+st.dataframe(spectra_df, use_container_width=True)
