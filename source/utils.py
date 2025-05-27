@@ -796,7 +796,7 @@ def sort_spectrum_datachannels(available_channels):
     """
     Sort data channels for plotting
     """
-    preferred_order = ['IR Amplitude (mV)', 'PLL Frequency (kHz)', 'IR Phase (Deg)', 'Background']
+    preferred_order = ['IR Amplitude (mV)', 'Amplitude 2 (V)', 'PLL Frequency (kHz)', 'IR Phase (Deg)', 'Background']
     return sorted(available_channels, key=lambda x: preferred_order.index(x) if x in preferred_order else 999)
 
 def plot_spectrum_qc(doc, selected_spectrum_label, channels_to_show, show_other_spectra=True, show_map=None, show_spectrum_labels=True):

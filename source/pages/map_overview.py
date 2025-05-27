@@ -27,8 +27,6 @@ st.write(
 doc = SessionStateSingleton().get_anasys_doc()
 df_heightmap_metadata = SessionStateSingleton().get_cached_heightmap_metadata()
 
-doc.HeightMaps
-
 # Main content
 if len(doc.HeightMaps) == 0:
     st.error('No maps found. Choose another file', icon=':material/error:')
@@ -62,7 +60,7 @@ with st.expander('View metadata and select maps to display', expanded=False):
     if len(selected_map_labels) == 0:
         selected_map_labels = (
             df_heightmap_metadata
-            .query('DataChannel.str.contains("Ampl") and TraceRetrace == "PrimaryTrace"')
+            .query('(DataChannel.str.contains("Ampl") or DataChannel.str.contains("ampl")) and TraceRetrace == "PrimaryTrace"')
             .Label
             .tolist()
         )
