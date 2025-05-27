@@ -241,6 +241,17 @@ class SessionStateSingleton:
         st.session_state.error_message = value
 
 
+def setup_variable_col_width():
+    st.markdown(unsafe_allow_html=True, body="""<style>
+            div[data-testid="stColumn"] {
+                width: fit-content !important;
+                flex: unset;
+            }
+            div[data-testid="stColumn"] * {
+                width: fit-content !important;
+            }
+        </style>""")
+
 def setup_page(streamlit_layout='centered'):
     """ 
     Set up a page's sidebar with navitation links and file upload widget
@@ -250,18 +261,6 @@ def setup_page(streamlit_layout='centered'):
         page_title='Anasys Python Tools' + (' (dev)' if DEV_MODE else ''),
         layout=streamlit_layout
     )
-
-    st.markdown(unsafe_allow_html=True, body="""
-        <style>
-            div[data-testid="stColumn"] {
-                width: fit-content !important;
-                flex: unset;
-            }
-            div[data-testid="stColumn"] * {
-                width: fit-content !important;
-            }
-        </style>
-    """)
 
     # Make sure all keys are initialised (to None if need be)
     # and get their values
@@ -298,7 +297,7 @@ def setup_page(streamlit_layout='centered'):
         initialise_upload_widget()
 
 
-def setup_page_with_redirect(allowed_file_types, streamlit_layout='centered'):
+def setup_page_with_redirect(allowed_file_types, streamlit_layout='wide'):
     """
     Checks whether the file uploaded is of the correct type to view a page
     Redirects to home page if not

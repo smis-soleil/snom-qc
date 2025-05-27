@@ -27,6 +27,8 @@ st.write(
 doc = SessionStateSingleton().get_anasys_doc()
 df_heightmap_metadata = SessionStateSingleton().get_cached_heightmap_metadata()
 
+doc.HeightMaps
+
 # Main content
 if len(doc.HeightMaps) == 0:
     st.error('No maps found. Choose another file', icon=':material/error:')

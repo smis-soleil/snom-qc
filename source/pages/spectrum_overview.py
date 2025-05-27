@@ -65,12 +65,18 @@ def button_download_csv(placeholder, key):
         disabled=buttondisabled,
         key=key
     )
+
+
 col1, col2 = st.columns(2, gap='small')
+utils.setup_variable_col_width()
 
 download_placeholder = col1.empty()
 csv_placeholder = col2.empty()
 button_download_qc(download_placeholder, key = 2)
-button_download_csv(csv_placeholder, 3)
+# button_download_csv(csv_placeholder, 3)
+
+if csv_placeholder.button('Download all spectra as CSV', icon=':material/table_view:'): 
+    st.switch_page('pages/spectra_export_csv.py')
 
 # Get all spectrum labels and data channels
 filename = SessionStateSingleton().get_file_name()
@@ -150,5 +156,5 @@ st.empty().pyplot(SessionStateSingleton().get_cached_spectrum_qa(
 # If the report files were not generated yet, do that and replace the buttons
 SessionStateSingleton().get_cached_spectrum_qa_pdf()
 button_download_qc(download_placeholder, key = 1)
-SessionStateSingleton().get_cached_spectrum_csv()
-button_download_csv(csv_placeholder, key = 4)
+# SessionStateSingleton().get_cached_spectrum_csv()
+# button_download_csv(csv_placeholder, key = 4)
