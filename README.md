@@ -1,4 +1,6 @@
-# SNOM-QC: a Streamlit web application to calculate visualize raw nanoFTIR spectral quality
+# SNOM-QC 
+
+## a Streamlit web application to calculate visualize raw nanoFTIR spectral quality
 
 [![Application][application-shield]][application-link]
 [![CC BY 4.0][license-shield]][license-link]
