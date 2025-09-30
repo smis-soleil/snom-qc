@@ -5,15 +5,13 @@
 [![DOI (repository)][doi-repo-shield]][doi-repo-link]
 ![DOI (paper)][doi-paper-shield]
 
-This repository contains the source code for the web application published in **Duverger et al. (in revision)**, allowing users to view unprocessed AFM-IR data and metadata from .axz files. The application is accessible at [anasys-python-tools-gui.streamlit.app][application-link] and includes an example dataset ([source/example.axz](source/example.axz)) and demonstration video ([source/demo.mp4](source/demo.mp4)).
-
-This code relies on the [anasys-python-tools](https://github.com/GeorgRamer/anasys-python-tools) package, co-published in Duverger et al. (in revision), which provides the necessary functions to read and process AFM-IR data files. The application is built using [Streamlit](https://streamlit.io/), a Python library for creating web applications.
+Description **_TODO_**
 
 **Known limitations:** This app is not intended to replace data analysis
-software. Instead, it is designed to provide a quick overview of AFM-IR (meta-)data,
-to data quality, and to foster the sharing of data between researchers. Furthermore,
-this application is not yet compatible with IconIR data files. If you experience
-any other issues, please open an issue on GitHub.
+
+**_TODO_**
+
+
 
 ## Local installation
 
@@ -33,7 +31,8 @@ python -m streamlit run source/app.py
 This work is licensed under the Creative Commons Attribution 4.0 International License [(CC BY 4.0)][license-link]. If you use this code in your work, please cite the paper, once published. 
 
 When explicitly referencing this code, you can use the DOI assigned to the repository. For example:
-> Duverger, Ramer, Louros, Schymkowitz & Rousseau. AXZ Viewer. GitHub repository. (2025) doi:[10.6084/m9.figshare.27991898][doi-repo-link].
+
+**_TODO_**
 
 [license-link]:       http://creativecommons.org/licenses/by/4.0/
 [license-image]:      https://i.creativecommons.org/l/by/4.0/88x31.png
@@ -46,3 +45,7 @@ When explicitly referencing this code, you can use the DOI assigned to the repos
 [doi-repo-link]: https://doi.org/...
 
 [doi-paper-shield]:  https://img.shields.io/badge/DOI_(paper)-pending-gainsboro
+
+## References
+
+This repository was originally forked from [anasys-python-tools-gui](https://github.com/wduverger/anasys-python-tools-gui)
